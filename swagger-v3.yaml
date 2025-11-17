@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Snap Send Solve integration API
   description: Snap Send Solve integration API
-  version: 2.8.1
+  version: 3.0.0
   contact:
     email: contact@snapsendsolve.com
     name: Snap Send Solve
@@ -14,7 +14,7 @@ tags:
   - name: Incident type
     description: Access to incident types
 paths:
-  /v2/reports:
+  /v3/reports:
     get:
       tags:
         - Report
@@ -44,6 +44,7 @@ paths:
             type: string
             enum:
               - Open
+              - Viewed
               - In progress
               - Closed
               - Triaged
@@ -108,7 +109,7 @@ paths:
                   $ref: '#/components/schemas/Report'
         '401':
           description: Unauthorized
-  /v2/reports/{reportId}:
+  /v3/reports/{reportId}:
     get:
       tags:
         - Report
@@ -162,7 +163,7 @@ paths:
           description: Successful operation
         '401':
           description: Unauthorized
-  /v2/incidentTypes:
+  /v3/incidentTypes:
     get:
       tags:
         - Incident type
@@ -189,7 +190,7 @@ paths:
                   $ref: '#/components/schemas/IncidentType'
         '401':
           description: Unauthorized
-  /v2/reports/{reportId}/triage/authorities:
+  /v3/reports/{reportId}/triage/authorities:
     get:
       tags:
         - Report triage
@@ -214,7 +215,7 @@ paths:
                   $ref: '#/components/schemas/Authority'
         '401':
           description: Unauthorized
-  /v2/reports/{reportId}/triage:
+  /v3/reports/{reportId}/triage:
     post:
       tags:
         - Report triage
@@ -277,6 +278,7 @@ components:
           type: string
           enum:
             - Open
+            - Viewed
             - In progress
             - Closed
             - Triaged
@@ -371,6 +373,27 @@ components:
           type: string
           nullable: false
           example: "https://services.snapsendsolve.com/reports/view/12345"
+        videoUrls:
+          type: list
+          nullable: true
+          example: ["https://example.com/video1.mp4"]
+        deflectionCount:
+          type: integer
+          nullable: true
+          example: 1
+        isFlaggedForSolver:
+          type: boolean
+          nullable: true
+          example: false
+        priority:
+          type: string
+          enum:
+            - High
+            - Medium
+            - Low
+            - None
+          nullable: true
+          example: High
     ReportUpdateRequest:
       type: object
       properties:
