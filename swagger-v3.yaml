@@ -1,0 +1,528 @@
+openapi: 3.0.3
+info:
+  title: Snap Send Solve integration API
+  description: Snap Send Solve integration API
+  version: 3.0.0
+  contact:
+    email: contact@snapsendsolve.com
+    name: Snap Send Solve
+servers:
+  - url: 'https://services.snapsendsolve.com/integration'
+tags:
+  - name: Report
+    description: Access to Snap Send Solve reports
+  - name: Incident type
+    description: Access to incident types
+paths:
+  /v3/reports:
+    get:
+      tags:
+        - Report
+      summary: Find reports
+      description: Returns a list of reports
+      operationId: getReports
+      security:
+        - apiKey: []
+      parameters:
+        - name: authorityId
+          in: query
+          description: The id of the your authority
+          schema:
+            type: integer
+          required: true
+        - name: pageSize
+          in: query
+          description: Maximum number of reports in the response. When parameters “startDate” and “endDate” are used together, the API response will ignore pageSize
+          schema:
+            type: integer
+            maximum: 250
+            default: 50
+        - name: status
+          in: query
+          description: report status
+          schema:
+            type: string
+            enum:
+              - Open
+              - In progress
+              - Closed
+              - Triaged
+        - name: idGt
+          in: query
+          description: report id greater than
+          schema:
+            type: integer
+        - name: idLt
+          in: query
+          description: report id less than
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          description: ISO 8601 datetime as “YYYY-MM-DDTHH:mm:ss.sssZ”
+          schema:
+            type: string
+            format: date-time
+            example: 2024-01-01T00:00:00.000Z
+        - name: endDate
+          in: query
+          description: ISO 8601 datetime as “YYYY-MM-DDTHH:mm:ss.sssZ”
+          schema:
+            type: string
+            format: date-time
+            example: 2024-02-01T00:00:00.000Z
+        - name: includeDetails
+          in: query
+          description: Whether all the report details should be included in the API response. All components of the report will be included by default. If this parameter is set to “false”, only “id”, “incidentType” and “date” will be presented in the API response.
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+        '401':
+          description: Unauthorized
+  /v2/reports/{reportId}:
+    get:
+      tags:
+        - Report
+      summary: Find report by ID
+      description: Returns a single report
+      operationId: getReportById
+      parameters:
+        - name: reportId
+          in: path
+          description: ID of report
+          required: true
+          schema:
+            type: integer
+        - name: includeBase64Images
+          in: query
+          description: If this parameter is used, based64 encoded images will be attached to the response. Use of this parameter should be restricted to special use cases.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          description: Unauthorized
+    post:
+      tags:
+        - Report
+      summary: Update report by ID
+      description: This API can be used to update report and send snapper message, which allows you to modify various fields either together in a single update. All attributes in the request payload are optional, providing flexibility to update only the necessary fields.
+      operationId: updateReportById
+      parameters:
+        - name: reportId
+          in: path
+          description: ID of report to update
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: Report update request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportUpdateRequest'
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+  /v2/incidentTypes:
+    get:
+      tags:
+        - Incident type
+      summary: Get incident types
+      description: Returns a list of all active incident types for given authority
+      operationId: getIncidentTypes
+      security:
+        - apiKey: []
+      parameters:
+        - name: authorityId
+          in: query
+          description: The id of the your authority
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncidentType'
+        '401':
+          description: Unauthorized
+  /v2/reports/{reportId}/triage/authorities:
+    get:
+      tags:
+        - Report triage
+      summary: Get triage authority list
+      description: Returns a list of authorities
+      operationId: getTriageAuthoritiesByByReportId
+      parameters:
+        - name: reportId
+          in: path
+          description: ID of report
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Authority'
+        '401':
+          description: Unauthorized
+  /v2/reports/{reportId}/triage:
+    post:
+      tags:
+        - Report triage
+      summary: Triage report
+      description: Triage report to other authority
+      operationId: triageReportById
+      parameters:
+        - name: reportId
+          in: path
+          description: ID of report to triage
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: Triage report request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriageReportRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+        '401':
+          description: Unauthorized
+components:
+  schemas:
+    IncidentType:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Snap Send Solve internal code
+          example: I_1
+        type:
+          type: string
+          enum:
+            - STANDARD
+            - CUSTOM
+          description: STANDARD incident types are configured by Snap Send Solve. CUSTOM incident types are configured by authority admin.
+          example: STANDARD
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Graffiti - General
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 18540106
+        status:
+          type: string
+          enum:
+            - Open
+            - In progress
+            - Closed
+            - Triaged
+          example: Open
+        stage:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: internal stage of the report, not visible to snapper.
+          example: Job assigned
+        isReportEmailSent:
+          type: boolean
+          description: whether the report email is sent to authority or not
+          example: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+          description: report image url
+        imageMetas:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageMeta'
+        address:
+          type: string
+          minLength: 0
+          maxLength: 300
+          description: address of the incident report
+          example: "221b Baker St, Marylebone, London NW1 6XE"
+        notes:
+          type: string
+          minLength: 0
+          maxLength: 10240
+          description: extra notes provided by snapper
+          example: "Gladstone was barking all night"
+        latitude:
+          type: string
+          minLength: 0
+          maxLength: 50
+          example: "51.523894"
+        longitude:
+          type: string
+          minLength: 0
+          maxLength: 50
+          example: "-0.158599"
+        incidentType:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: Barking dog
+        incidentTypeId:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: CI_2
+          description: Snap Send Solve internal code
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+          nullable: true
+          description: The top level category selected by snapper
+          example: Animal & Pest
+        date:
+          type: string
+          format: date-time
+          minLength: 0
+          maxLength: 50
+          description: ISO 8601 datetime as “YYYY-MM-DDTHH:mm:ss.sssZ”
+          example: "2020-07-16T10:55:46.877Z"
+        authorityReferenceId:
+          type: string
+          nullable: true
+          minLength: 0
+          maxLength: 50
+          description: internal referance ID
+          example: "CRM1854"
+        authorityNotes:
+          type: string
+          nullable: true
+          minLength: 0
+          maxLength: 10240
+          description: internal notes, not visible to snapper.
+          example: "Snapper could not be reached"
+        additionalFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdditionalField'
+        reporter:
+          $ref: '#/components/schemas/Reporter'
+        reportUrl:
+          type: string
+          nullable: false
+          example: "https://services.snapsendsolve.com/reports/view/12345"
+    ReportUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          nullable: true
+          enum:
+            - Open
+            - Viewed
+            - In progress
+            - Closed
+          example: In progress
+        stage:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: internal stage of the report, not visible to snapper.
+          example: Job assigned
+        authorityReferenceId:
+          type: string
+          nullable: true
+          minLength: 0
+          maxLength: 50
+          description: internal referance ID
+          example: "CRM1854"
+        authorityNotes:
+          type: string
+          nullable: true
+          minLength: 0
+          maxLength: 10240
+          description: internal notes, not visible to snapper.
+          example: "Snapper could not be reached"
+        messageToSnapper:
+          type: string
+          nullable: true
+          minLength: 0
+          maxLength: 1000
+          example: "The repairing work started. We will keep you updated on the progress."
+        notifySnapper:
+          type: boolean
+          default: true
+          nullable: true
+          description: When set to true, Snap Send Solve will try to notify the snapper via push notification and/or email
+          example: false
+    Reporter:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+          maxLength: 50
+          example: 7E5FA
+        name:
+          type: string
+          minLength: 0
+          maxLength: 50
+          example: Sherlock Holmes
+        firstName:
+          type: string
+          minLength: 0
+          maxLength: 64
+          example: Sherlock
+        lastName:
+          type: string
+          minLength: 0
+          maxLength: 64
+          example: Holmes
+        email:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: sh@detective.com
+        phone:
+          type: string
+          minLength: 0
+          maxLength: 50
+          example: "+2072243688"
+        isPhoneVerified:
+          type: boolean
+          example: true
+        address:
+          type: string
+          minLength: 0
+          maxLength: 50
+          example: 221b Baker Street
+        suburb:
+          type: string
+          minLength: 0
+          maxLength: 50
+          example: Marylebone
+        postcode:
+          type: string
+          minLength: 0
+          maxLength: 50
+          example: NW1 6XE
+    Image:
+      type: string
+      format: uri
+      example: https://snapsendsolve-assets.s3-ap-southeast-2.amazonaws.com/email/superman.png
+    ImageMeta:
+      description: exif information of the updated images
+      type: object
+      properties:
+        DateTimeOriginal:
+          description: The date and time when the original image data was generated. The format is "YYYY:MM:DD HH:MM:SS" in device local time.
+          type: string
+          nullable: true
+          example: 2021:01:01 12:34:56
+        GPSLatitude:
+          description: Indicates the latitude
+          type: string
+          nullable: true
+          example: -37.830366
+        GPSLongitude:
+          description: Indicates the longitude
+          type: string
+          nullable: true
+          example: 144.996439
+        GPSImgDirectionRef:
+          description: Indicates the reference for giving the direction of the image when it is captured. 'T' denotes true direction and 'M' is magnetic direction.
+          type: string
+          nullable: true
+          example: T
+        GPSImgDirection:
+          description: Indicates the direction of the image when it was captured. The range of values is from 0.00 to 359.99.
+          type: string
+          nullable: true
+          example: 80.350
+    AdditionalField:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+          example: Dog breed
+        value:
+          type: string
+          minLength: 0
+          maxLength: 1024
+          example: Bull dog
+    Authority:
+      type: object
+      properties:
+        authorityId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          example: ATF6
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 128
+          example: Target responsible authority
+    TriageReportRequest:
+      type: object
+      properties:
+        authorityId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          example: ATF6
+    OperationStatus:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: Authorization
+security:
+  - apiKey: []
